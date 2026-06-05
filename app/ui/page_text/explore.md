@@ -1,0 +1,1 @@
+Plot a **t-SNE** arrangement of all sensorimotor concepts.

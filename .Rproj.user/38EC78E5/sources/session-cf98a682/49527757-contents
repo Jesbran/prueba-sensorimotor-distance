@@ -1,0 +1,133 @@
+# calculate/norms.r
+source("meta.r")
+
+if (!requireNamespace("readxl", quietly = TRUE)) install.packages("readxl")
+library(readxl)
+library(stringr)
+library(dplyr)
+library(tools)
+
+# --- Helper Functions ---
+
+canonise_word <- function(x) x %>% str_trim() %>% tolower() %>% str_squish()
+
+standardise_norms <- function(df) {
+  if (!("Word" %in% names(df))) stop("Dataset is missing the 'Word' column")
+  df$Word <- canonise_word(df$Word)
+  df
+}
+
+# Function to read both CSV and XLSX
+read_any_data <- function(path) {
+  ext <- tolower(file_ext(path))
+  if (ext == "csv") {
+    return(read.csv(path, stringsAsFactors = FALSE))
+  } else if (ext %in% c("xlsx", "xls")) {
+    return(as.data.frame(read_excel(path)))
+  } else {
+    stop(paste("Unsupported file format:", ext))
+  }
+}
+
+# --- Dimensions and Columns ---
+
+sensory_columns <- c("Auditory.mean","Gustatory.mean","Haptic.mean","Interoceptive.mean","Olfactory.mean","Visual.mean")
+motor_columns   <- c("Foot_leg.mean","Hand_arm.mean","Head.mean","Mouth.mean","Torso.mean")
+all_columns     <- c(sensory_columns, motor_columns)
+
+dominance_column_sensorimotor <- "Dominant.sensorimotor"
+dominance_column_perceptual   <- "Dominant.perceptual"
+dominance_column_action       <- "Dominant.action"
+
+# --- Dataset Configuration ---
+
+dataset_config <- list(
+  en_deepseek  = list(label = "English (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_English.csv"),
+  en_GPT       = list(label = "English (GPT)", file = "GPT_sensorimotor_norms_T0_English.csv"),
+  en_human     = list(label = "English (Human)", file = "sensorimotor_norms_Lancaster_matched.csv"),
+  ch_human     = list(label = "Chinese (Human)", file = "SENSORIMOTORNOR_MS_FOR_CHINESE_NOUNS.xlsx"),
+  ch_deepseek  = list(label = "Chinese (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Chinese.csv"),
+  ch_GPT       = list(label = "Chinese (GPT)", file = "GPT_sensorimotor_norms_T0_Chinese.csv"),
+  it_human     = list(label = "Italian (Human)", file = "sensorimotor_norms_italian.xlsx"),
+  it_deepseek  = list(label = "Italian (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Italian.csv"),
+  it_GPT       = list(label = "Italian (GPT)", file = "GPT_sensorimotor_norms_T0_Italian.csv"),
+  cr_human     = list(label = "Croatian (Human)", file = "CROATIAN_NORMS_CORRECTED.xlsx"),
+  cr_deepseek  = list(label = "Croatian (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Croatian.csv"),
+  cr_GPT       = list(label = "Croatian (GPT)", file = "GPT_sensorimotor_norms_T0_Croatian.csv"),
+  es_human     = list(label = "Spanish (Human)", file = "spanish_mex_sensorimotor_norms.csv"),
+  es_deepseek  = list(label = "Spanish (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Spanish.csv"),
+  es_GPT       = list(label = "Spanish (GPT)", file = "GPT_sensorimotor_norms_T0_Spanish.csv")
+)
+
+# --- Automated Loading ---
+
+DATASETS <- lapply(names(dataset_config), function(id) {
+  cfg <- dataset_config[[id]]
+  path <- paste0(data_dir, cfg$file)
+  
+  if (!file.exists(path)) {
+    warning(paste("File not found for dataset:", id, "at", path))
+    return(NULL)
+  }
+  
+  # Load and standardise
+  df <- read_any_data(path) %>% standardise_norms()
+  
+  # Validate columns
+  miss <- setdiff(all_columns, names(df))
+  if (length(miss) > 0) {
+    warning(paste0("Dataset '", id, "' is missing columns: ", paste(miss, collapse = ", ")))
+  }
+  
+  list(id = id, label = cfg$label, norms = df)
+})
+names(DATASETS) <- names(dataset_config)
+DATASETS <- Filter(Negate(is.null), DATASETS) # Remove failed loads
+
+# --- Accessor Functions ---
+
+get_norms <- function(ds) DATASETS[[ds]]$norms
+dataset_label <- function(ds) DATASETS[[ds]]$label
+
+all_words <- function(ds) get_norms(ds)$Word
+
+# Union of all words across all loaded datasets
+all_words_union <- function() {
+  unique(unlist(lapply(DATASETS, function(x) x$norms$Word)))
+}
+
+# Covariance matrix per dataset (for Mahalanobis)
+get_covariance_matrix <- function(ds) {
+  X <- as.matrix(get_norms(ds)[, all_columns])
+  storage.mode(X) <- "double"
+  cov(X)
+}
+
+# Sampling functions (now requiring dynamic ds)
+random_norms <- function(n, ds) {
+  vocab <- all_words(ds)
+  sample(vocab, min(n, length(vocab)))
+}
+
+random_norm  <- function(ds) random_norms(1, ds)[1]
+
+random_norm_pairs <- function(n, ds) {
+  pairs <- random_norms(2 * n, ds)
+  if (length(pairs) < 2) return(list())
+  dim(pairs) <- c(length(pairs) / 2, 2)
+  split(pairs, rep(1:nrow(pairs), each = ncol(pairs))) %>% array
+}
+
+# Vector/Matrix retrieval
+vector_for_word <- function(word, ds) {
+  df <- get_norms(ds)
+  df[df$Word == word, all_columns, drop = FALSE]
+}
+
+matrix_for_words <- function(words, ds) {
+  df <- get_norms(ds)
+  mx <- as.matrix(df[match(words, df$Word), all_columns])
+  storage.mode(mx) <- "double"
+  mx
+}
+

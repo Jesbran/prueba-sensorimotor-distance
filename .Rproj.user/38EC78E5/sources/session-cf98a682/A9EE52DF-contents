@@ -1,0 +1,522 @@
+library(dplyr)
+#################################
+# Lancasrer sensorimotor norms
+#################################
+
+norms <- read.csv("sensorimotor_norms_Lancaster_matched.csv", header = TRUE)
+
+#-------------------------------
+# Cargar RATIONALE DeepSeek
+df <- read.csv("DeepSeek_RATIONALE_participants_T0_English.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word = word)
+
+
+df <- df %>%
+  select(Word, everything())
+
+write.csv(df, "DeepSeek_RATIONALE_participants_T0_English.csv", row.names = FALSE)
+
+
+#-------------------------------
+# Cargar RATIONALE GPT
+df <- read.csv("GPT_RATIONALE_participants_T0_English.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word = word)
+
+
+df <- df %>%
+  select(Word, everything())
+
+write.csv(df, "GPT_RATIONALE_participants_T0_English.csv", row.names = FALSE)
+
+
+#################################
+# Spanish Mex sensorimotor norms
+#################################
+
+norms <- read.csv("spanish_mex_sensorimotor_norms.csv", header = TRUE)
+
+# Seleccionar solo la Condition 1
+norms <- norms %>%
+  filter(Condition == 1)
+
+# Cambiar nombre de columna 
+norms <- norms %>%
+  rename(Word_Spanish = Palabra)
+
+norms <- norms %>%
+  mutate(Word_Spanish = str_trim(str_to_lower(Word_Spanish)))
+colnames(norms)
+
+write.csv(norms, "spanish_mex_sensorimotor_norms.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar RATIONALE DeepSeek
+df <- read.csv("DeepSeek_RATIONALE_participants_T0_Spanish.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Spanish = word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Spanish, Word),
+    by = "Word_Spanish"
+  )
+
+df <- df %>%
+  select(Word, Word_Spanish, everything())
+
+write.csv(df, "DeepSeek_RATIONALE_participants_T0_Spanish.csv", row.names = FALSE)
+
+
+
+write.csv(df, "DeepSeek_RATIONALE_participants_T0_English.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar RATIONALE GPT
+df <- read.csv("GPT_RATIONALE_participants_T0_Spanish.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Spanish = word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Spanish, Word),
+    by = "Word_Spanish"
+  )
+
+df <- df %>%
+  select(Word, Word_Spanish, everything())
+
+write.csv(df, "GPT_RATIONALE_participants_T0_Spanish.csv", row.names = FALSE)
+
+
+#################################
+# Croatian sensorimotor norms
+#################################
+
+norms <- read_excel("CROATIAN_NORMS_CORRECTED.xlsx")
+
+# Poner minúsculas
+norms <- norms %>%
+  mutate(Word_Croatian = str_trim(str_to_lower(Word_Croatian)))
+norms <- norms %>%
+  mutate(Word = str_trim(str_to_lower(Word)))
+colnames(norms)
+
+# Poner pimero la columna Word
+norms <- norms %>%
+  select(Word, everything())
+
+# Guardar archivo
+write.csv(norms, "Croatian_sensorimotor_norms.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar normas DeepSeek
+df <- read.csv("DeepSeek_sensorimotor_norms_T0_Croatian.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Croatian = Word)
+df <- df %>%
+  mutate(Word_Croatian = str_trim(str_to_lower(Word_Croatian)))
+colnames(df)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Croatian, Word),
+    by = "Word_Croatian"
+  )
+
+df <- df %>%
+  select(Word, everything())
+
+write.csv(df, "DeepSeek_sensorimotor_norms_T0_Croatian.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar normas GPT
+df <- read.csv("GPT_sensorimotor_norms_T0_Croatian.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Croatian = Word)
+df <- df %>%
+  mutate(Word_Croatian = str_trim(str_to_lower(Word_Croatian)))
+colnames(df)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Croatian, Word),
+    by = "Word_Croatian"
+  )
+
+df <- df %>%
+  select(Word, everything())
+
+write.csv(df, "GPT_sensorimotor_norms_T0_Croatian.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar RATIONALE DeepSeek
+df <- read.csv("DeepSeek_RATIONALE_participants_T0_Croatian.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Croatian = word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Croatian, Word),
+    by = "Word_Croatian"
+  )
+
+df <- df %>%
+  select(Word, Word_Croatian, everything())
+
+write.csv(df, "DeepSeek_RATIONALE_participants_T0_Croatian.csv", row.names = FALSE)
+
+
+#-------------------------------
+# Cargar RATIONALE GPT
+df <- read.csv("GPT_RATIONALE_participants_T0_Croatian.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Croatian = word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Croatian, Word),
+    by = "Word_Croatian"
+  )
+
+df <- df %>%
+  select(Word, Word_Croatian, everything())
+
+write.csv(df, "GPT_RATIONALE_participants_T0_Croatian.csv", row.names = FALSE)
+
+#################################
+# Chinese sensorimotor norms
+#################################
+
+norms <- read_excel("SENSORIMOTORNOR_MS_FOR_CHINESE_NOUNS.xlsx")
+
+colnames(norms)
+
+# Cambiar nombre de columna
+norms <- norms %>%
+  rename(Word_Chinese = Word)
+
+# Cambiar nombre de columna
+norms <- norms %>%
+  rename(Word = English_translation)
+
+# Poner pimero la columna Word
+norms <- norms %>%
+  select(Word, everything())
+
+colnames(norms)
+
+# Cambiar nombres de las columnas
+norms <- norms %>%
+  rename(
+    # ===== PERCEPTUAL MEANS =====
+    Visual.mean         = visual,
+    Auditory.mean       = auditory,
+    Gustatory.mean      = gustatory,
+    Haptic.mean         = tactile,
+    Interoceptive.mean  = interoceptive,
+    Olfactory.mean      = olfactory,
+    # ===== ACTION MEANS =====
+    Foot_leg.mean       = `leg/foot`,
+    Hand_arm.mean       = `hand/arm`,
+    Mouth.mean          = `mouth/throat`,
+    Head.mean           = head,
+    Torso.mean          = torso,
+    # ===== PERCEPTUAL SD =====
+    Visual.SD           = visual_SD,
+    Auditory.SD         = auditory_SD,
+    Gustatory.SD        = taste_SD,
+    Haptic.SD           = tactile_SD,
+    Interoceptive.SD    = interoceptive_SD,
+    Olfactory.SD        = smell_SD,
+    # ===== ACTION SD =====
+    Foot_leg.SD         = `leg/foot_SD`,
+    Hand_arm.SD         = `hand/arm_SD`,
+    Mouth.SD            = `mouth/throat_SD`,
+    Head.SD             = head_SD,
+    Torso.SD            = torso_SD,
+    # ===== SUMMARY VARIABLES =====
+    Max_strength.perceptual     = max_perceptual,
+    Minkowski3.perceptual       = Minkowski3_perceptual,
+    Exclusivity.perceptual      = modality_exclusivity,
+    Dominant.perceptual         = dominant_modality,
+    Max_strength.action         = max_action,
+    Minkowski3.action           = Minkowski3_action,
+    Exclusivity.action          = effector_exclusivity,
+    Dominant.action             = dominant_effector,
+    Max_strength.sensorimotor   = max_sensorimotor,
+    Minkowski3.sensorimotor     = Minkowski3_sensorimotor,
+    Exclusivity.sensorimotor    = exclusivity_sensorimotor,
+    Dominant.sensorimotor       = dominant_sensorimotor
+  )
+
+norms <- norms %>%
+  select(
+    Word, Word_Chinese, traditional, pinyin, pos, radical_1, character_type_1, radical_2, character_type_2,
+    Auditory.mean, Gustatory.mean, Haptic.mean, Interoceptive.mean, Olfactory.mean, Visual.mean,
+    Foot_leg.mean, Hand_arm.mean, Head.mean, Mouth.mean, Torso.mean,
+    Auditory.SD, Gustatory.SD, Haptic.SD, Interoceptive.SD, Olfactory.SD, Visual.SD,
+    Foot_leg.SD, Hand_arm.SD, Head.SD, Mouth.SD, Torso.SD,
+    everything()
+  )
+
+# Guardar archivo
+write.csv(norms, "Chinese_sensorimotor_norms.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar normas DeepSeek
+df <- read.csv("DeepSeek_sensorimotor_norms_T0_Chinese.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Chinese = Word)
+
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Chinese, Word),
+    by = "Word_Chinese"
+  )
+
+df <- df %>%
+  select(Word, everything())
+
+write.csv(df, "DeepSeek_sensorimotor_norms_T0_Chinese.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar normas GPT
+df <- read.csv("GPT_sensorimotor_norms_T0_Chinese.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Chinese = Word)
+df <- df %>%
+  mutate(Word_Chinese = str_trim(str_to_lower(Word_Chinese)))
+colnames(df)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Chinese, Word),
+    by = "Word_Chinese"
+  )
+
+df <- df %>%
+  select(Word, everything())
+
+write.csv(df, "GPT_sensorimotor_norms_T0_Chinese.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar RATIONALE DeepSeek
+df <- read.csv("DeepSeek_RATIONALE_participants_T0_Chinese.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Chinese = word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Chinese, Word),
+    by = "Word_Chinese"
+  )
+
+df <- df %>%
+  select(Word, Word_Chinese, everything())
+
+write.csv(df, "DeepSeek_RATIONALE_participants_T0_Chinese.csv", row.names = FALSE)
+
+
+#-------------------------------
+# Cargar RATIONALE GPT
+df <- read.csv("GPT_RATIONALE_participants_T0_Chinese.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Chinese = word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Chinese, Word),
+    by = "Word_Chinese"
+  )
+
+df <- df %>%
+  select(Word, Word_Chinese, everything())
+
+write.csv(df, "GPT_RATIONALE_participants_T0_Chinese.csv", row.names = FALSE)
+
+#################################
+# Italian sensorimotor norms
+#################################
+
+norms <- read_excel("sensorimotor_norms_italian.xlsx")
+
+colnames(norms)
+
+# Cambiar nombre de columna
+norms <- norms %>%
+  rename(Word_Italian = Word)
+
+# Cambiar nombre de columna
+norms <- norms %>%
+  rename(Word = Eng_Word)
+
+# Poner pimero la columna Word
+norms <- norms %>%
+  select(Word, Word_Italian, everything())
+
+colnames(norms)
+
+# Cambiar nombres de las columnas
+norms <- norms %>%
+  rename(
+    # ===== PERCEPTUAL MEANS =====
+    Interoceptive.mean  = M_int,
+    Gustatory.mean      = M_taste,
+    Olfactory.mean      = M_smell,
+    Haptic.mean         = M_touch,
+    Auditory.mean       = M_audition,
+    Visual.mean         = M_vision,
+    # ===== PERCEPTUAL SD =====
+    Interoceptive.SD    = SD_int,
+    Gustatory.SD        = SD_taste,
+    Olfactory.SD        = SD_smell,
+    Haptic.SD           = SD_touch,
+    Auditory.SD         = SD_audition,
+    Visual.SD           = SD_vision,
+    # ===== ACTION MEANS =====
+    Head.mean           = M_head,
+    Foot_leg.mean       = `M_foot/leg`,
+    Hand_arm.mean       = `M_hand/arm`,
+    Mouth.mean          = `M_mouth/throat`,
+    Torso.mean          = M_torso,
+    # ===== ACTION SD =====
+    Head.SD             = SD_head,
+    Foot_leg.SD         = `SD_foot/leg`,
+    Hand_arm.SD         = `SD_hand/arm`,
+    Mouth.SD            = `SD_mouth/throat`,
+    Torso.SD            = SD_torso
+  )
+
+norms <- norms %>%
+  select(
+    Word, Word_Italian, Spa_Word, Eng_Trad_Rec, Spa_Trad_Rec, WordClass,
+    Auditory.mean, Gustatory.mean, Haptic.mean, Interoceptive.mean, Olfactory.mean, Visual.mean,
+    Head.mean, Foot_leg.mean, Hand_arm.mean, Mouth.mean, Torso.mean,
+    Auditory.SD, Gustatory.SD, Haptic.SD, Interoceptive.SD, Olfactory.SD, Visual.SD,
+    Head.SD, Foot_leg.SD, Hand_arm.SD, Mouth.SD, Torso.SD,
+    everything()
+  )
+
+# Guardar archivo
+write.csv(norms, "Italian_sensorimotor_norms.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar normas DeepSeek
+df <- read.csv("DeepSeek_sensorimotor_norms_T0_Italian.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Italian = Word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Italian, Word),
+    by = "Word_Italian"
+  )
+
+df <- df %>%
+  select(Word, everything())
+
+write.csv(df, "DeepSeek_sensorimotor_norms_T0_Italian.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar normas GPT
+df <- read.csv("GPT_sensorimotor_norms_T0_Italian.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Italian = Word)
+df <- df %>%
+  mutate(Word_Italian = str_trim(str_to_lower(Word_Italian)))
+colnames(df)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Italian, Word),
+    by = "Word_Italian"
+  )
+
+df <- df %>%
+  select(Word, everything())
+
+write.csv(df, "GPT_sensorimotor_norms_T0_Italian.csv", row.names = FALSE)
+
+#-------------------------------
+# Cargar RATIONALE DeepSeek
+df <- read.csv("DeepSeek_RATIONALE_participants_T0_Italian.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Italian = word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Italian, Word),
+    by = "Word_Italian"
+  )
+
+df <- df %>%
+  select(Word, Word_Italian, everything())
+
+write.csv(df, "DeepSeek_RATIONALE_participants_T0_Italian.csv", row.names = FALSE)
+
+
+#-------------------------------
+# Cargar RATIONALE GPT
+df <- read.csv("GPT_RATIONALE_participants_T0_Italian.csv", header = TRUE)
+
+# Cambiar nombre de columna y poner minúsculas
+df <- df %>%
+  rename(Word_Italian = word)
+
+# Agregar columna Word
+df <- df %>%
+  left_join(
+    norms %>% select(Word_Italian, Word),
+    by = "Word_Italian"
+  )
+
+df <- df %>%
+  select(Word, Word_Italian, everything())
+
+write.csv(df, "GPT_RATIONALE_participants_T0_Italian.csv", row.names = FALSE)

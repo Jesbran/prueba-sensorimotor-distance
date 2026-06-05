@@ -1,0 +1,81 @@
+source("meta.r")
+
+if (!requireNamespace("readxl", quietly = TRUE)) install.packages("readxl")
+library(readxl)
+library(stringr)
+library(dplyr)
+
+canonise_word <- function(x) x %>% str_trim() %>% tolower() %>% str_squish()
+
+standardise_norms <- function(df) {
+  if (!("Word" %in% names(df))) stop("Dataset sin columna Word")
+  df$Word <- canonise_word(df$Word)
+  df
+}
+
+# 11 dimensiones mean (deben existir en ambos)
+sensory_columns <- c("Auditory.mean","Gustatory.mean","Haptic.mean","Interoceptive.mean","Olfactory.mean","Visual.mean")
+motor_columns   <- c("Foot_leg.mean","Hand_arm.mean","Head.mean","Mouth.mean","Torso.mean")
+all_columns     <- c(sensory_columns, motor_columns)
+
+dominance_column_sensorimotor <- "Dominant.sensorimotor"
+dominance_column_perceptual   <- "Dominant.perceptual"
+dominance_column_action       <- "Dominant.action"
+
+# --- carga datasets ---
+norms_A <- read.csv(paste0(data_dir, "DeepSeek_sensorimotor_norms_T0_English.csv"), stringsAsFactors = FALSE) %>%
+  standardise_norms()
+
+norms_B <- read.csv(paste0(data_dir, "sensorimotor_norms_Lancaster_matched.csv")) %>%
+  as.data.frame(stringsAsFactors = FALSE) %>%
+  standardise_norms()
+
+check_cols <- function(df, name) {
+  miss <- setdiff(all_columns, names(df))
+  if (length(miss) > 0) stop(paste0("En ", name, " faltan columnas: ", paste(miss, collapse = ", ")))
+}
+check_cols(norms_A, "DeepSeek")
+check_cols(norms_B, "Lancaster")
+
+DATASETS <- list(
+  A = list(id="A", label="DeepSeek",  norms=norms_A),
+  B = list(id="B", label="Lancaster", norms=norms_B)
+)
+
+get_norms <- function(ds=c("A","B")) DATASETS[[match.arg(ds)]]$norms
+dataset_label <- function(ds=c("A","B")) DATASETS[[match.arg(ds)]]$label
+
+all_words <- function(ds=c("A","B")) get_norms(ds)$Word
+all_words_union <- function() union(all_words("A"), all_words("B"))
+all_words_intersection <- function() intersect(all_words("A"), all_words("B"))
+
+# covarianza por dataset (para Mahalanobis)
+get_covariance_matrix <- function(ds=c("A","B")) {
+  ds <- match.arg(ds)
+  X <- as.matrix(get_norms(ds)[, all_columns])
+  storage.mode(X) <- "double"
+  cov(X)
+}
+
+# sampling (por defecto A para no romper prefills antiguos)
+random_norms <- function(n, ds="A") sample(all_words(ds), n)
+random_norm  <- function(ds="A") random_norms(1, ds)[1]
+random_norm_pairs <- function(n, ds="A") {
+  pairs <- random_norms(2*n, ds)
+  dim(pairs) <- c(n, 2)
+  split(pairs, rep(1:nrow(pairs), each=ncol(pairs))) %>% array
+}
+
+# vectores / matrices por dataset
+vector_for_word <- function(word, ds="A") {
+  df <- get_norms(ds)
+  df[df$Word == word, all_columns, drop=FALSE]
+}
+
+matrix_for_words <- function(words, ds="A") {
+  df <- get_norms(ds)
+  mx <- as.matrix(df[match(words, df$Word), all_columns])
+  storage.mode(mx) <- "double"
+  mx
+}
+

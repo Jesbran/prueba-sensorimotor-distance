@@ -1,0 +1,123 @@
+# precompute_tsne_all.R
+# Genera caches t-SNE en formato .bin para DeepSeek (A) y Lancaster (B)
+# y los deja en app/data/ con nombres:
+# t-SNE_3_<distance>_cache_A.bin
+# t-SNE_3_<distance>_cache_B.bin
+
+# ------------------ CONFIG ------------------
+base_dir <- path.expand("~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Archivos_Lancaster_para_LLMs/Shiny/sensorimotor-distance-LLMs")
+data_dir <- file.path(base_dir, "app", "data")
+
+deepseek_csv <- file.path(data_dir, "DeepSeek_sensorimotor_norms_T0_English.csv")
+lancaster_csv <- file.path(data_dir, "sensorimotor_norms_Lancaster_matched.csv")
+
+dims <- 3
+distances <- c("cosine", "euclidean", "minkowski-3", "correlation", "mahalanobis")
+
+perplexity <- 30
+max_iter <- 1000
+eta <- 200
+seed <- 1
+# --------------------------------------------
+
+# paquetes
+pkgs <- c("Rtsne", "proxy", "readxl")
+to_install <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+if (length(to_install)) install.packages(to_install)
+
+library(Rtsne)
+library(proxy)
+library(readxl)
+
+feature_cols <- c(
+  "Auditory.mean","Gustatory.mean","Haptic.mean","Interoceptive.mean","Olfactory.mean","Visual.mean",
+  "Foot_leg.mean","Hand_arm.mean","Head.mean","Mouth.mean","Torso.mean"
+)
+
+canonise_word <- function(x) tolower(trimws(gsub("\\s+", " ", x)))
+
+standardise_norms <- function(df) {
+  stopifnot("Word" %in% names(df))
+  df$Word <- canonise_word(df$Word)
+  df
+}
+
+write_cache_bin <- function(mat, bin_path) {
+  stopifnot(is.matrix(mat))
+  con <- file(bin_path, "wb")
+  on.exit(close(con), add = TRUE)
+  
+  writeBin(as.integer(nrow(mat)), con, size = 4, endian = "little")
+  writeBin(as.integer(ncol(mat)), con, size = 4, endian = "little")
+  
+  for (j in seq_len(ncol(mat))) {
+    writeBin(as.double(mat[, j]), con, size = 8, endian = "little")
+  }
+}
+
+mahalanobis_dist <- function(X) {
+  S  <- cov(X)
+  VI <- solve(S)
+  R  <- chol(VI)
+  X2 <- X %*% R
+  as.matrix(dist(X2, method = "euclidean"))
+}
+
+distance_matrix <- function(X, distance_name) {
+  dn <- tolower(distance_name)
+  
+  if (dn == "euclidean") return(as.matrix(dist(X, method = "euclidean")))
+  if (dn == "minkowski-3") return(as.matrix(dist(X, method = "minkowski", p = 3)))
+  if (dn %in% c("cosine", "correlation")) return(as.matrix(proxy::dist(X, method = dn)))
+  if (dn == "mahalanobis") return(mahalanobis_dist(X))
+  
+  stop("Distancia no soportada: ", distance_name)
+}
+
+compute_tsne <- function(X, dims, distance_name) {
+  if (!all(is.finite(X))) stop("X contiene NA/Inf. Limpia/imputa antes de t-SNE.")
+  D <- distance_matrix(X, distance_name)
+  
+  set.seed(seed)
+  fit <- Rtsne(
+    D, is_distance = TRUE, dims = dims,
+    perplexity = perplexity, max_iter = max_iter, eta = eta,
+    check_duplicates = FALSE, verbose = TRUE
+  )
+  fit$Y
+}
+
+# -------- cargar datasets --------
+if (!file.exists(deepseek_csv)) stop("No encuentro: ", deepseek_csv)
+if (!file.exists(lancaster_csv)) stop("No encuentro: ", lancaster_csv)
+
+norms_A <- standardise_norms(read.csv(deepseek_csv, stringsAsFactors = FALSE))
+norms_B <- standardise_norms(read.csv(lancaster_csv, stringsAsFactors = FALSE))
+
+# Validación columnas
+missA <- setdiff(feature_cols, names(norms_A))
+missB <- setdiff(feature_cols, names(norms_B))
+if (length(missA)) stop("DeepSeek: faltan columnas: ", paste(missA, collapse=", "))
+if (length(missB)) stop("Lancaster: faltan columnas: ", paste(missB, collapse=", "))
+
+X_A <- as.matrix(norms_A[, feature_cols]); storage.mode(X_A) <- "double"
+X_B <- as.matrix(norms_B[, feature_cols]); storage.mode(X_B) <- "double"
+
+dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+
+# -------- precompute --------
+run_for_dataset <- function(X, ds_tag) {
+  for (d in distances) {
+    message("\n=== Dataset ", ds_tag, " | distance=", d, " | dims=", dims, " ===")
+    Y <- compute_tsne(X, dims = dims, distance_name = d)
+    out <- file.path(data_dir, sprintf("t-SNE_%d_%s_cache_%s.bin", dims, tolower(d), ds_tag))
+    write_cache_bin(Y, out)
+    message("Guardado: ", out)
+  }
+}
+
+run_for_dataset(X_A, "A")
+run_for_dataset(X_B, "B")
+
+message("\nListo. Archivos generados:")
+print(list.files(data_dir, pattern = "^t-SNE_3_.*_cache_[AB]\\.bin$", full.names = TRUE))

@@ -1,0 +1,3 @@
+Plot a **t-SNE** arrangement of all sensorimotor concepts.
+
+t-SNE visualizes high-dimensional data by assigning each point a location in a two- or three-dimensional map while preserving meaningful structure, keeping similar points close and dissimilar points apart (Van der Maaten & Hinton, [2008](https://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf)). 

@@ -1,0 +1,117 @@
+source("calculate/norms.r")
+source("calculate/distance.r")
+
+# Distancia pareada entre dos listas de palabras (punto a punto)
+pairwise_dist_vector <- function(left_words, right_words, distance_type, ds_left, ds_right) {
+  dfL <- get_norms(ds_left); dfR <- get_norms(ds_right)
+  
+  ok <- (left_words %in% dfL$Word) & (right_words %in% dfR$Word)
+  out <- rep(NA_real_, length(left_words))
+  if (!any(ok)) return(out)
+  
+  ML <- matrix_for_words(left_words[ok], ds=ds_left)
+  MR <- matrix_for_words(right_words[ok], ds=ds_right)
+  
+  if (distance_type == "mahalanobis") {
+    # Convención: en comparaciones cruzadas usamos la covarianza del dataset izquierdo
+    covL <- get_covariance_matrix(ds_left)
+    dmx <- distance_matrix(ML, MR, distance_type, covariance_matrix=covL)
+  } else {
+    dmx <- distance_matrix(ML, MR, distance_type)
+  }
+  
+  # Como dmx es una matriz completa, extraemos solo la diagonal (los pares exactos)
+  out[ok] <- diag(dmx)
+  out
+}
+
+# One-to-one (Crea columnas dinámicas basadas en los datasets ds1 y ds2 seleccionados)
+distance_table_for_word_pairs <- function(left_words, right_words, distance_type, ds1, ds2) {
+  if (length(left_words) != length(right_words)) stop("Pares de palabras no coinciden en longitud")
+  if (length(left_words) == 0) return(NULL)
+  
+  tab <- data.frame(`Word 1` = left_words, `Word 2` = right_words, check.names = FALSE)
+  
+  lbl1 <- dataset_label(ds1)
+  lbl2 <- dataset_label(ds2)
+  dist_lbl <- distance_col_name(distance_type)
+  
+  # Si son datasets iguales, solo calculamos una columna intra-dataset
+  if (ds1 == ds2) {
+    col11 <- paste0(dist_lbl, " (", lbl1, " → ", lbl1, ")")
+    tab[[col11]] <- pairwise_dist_vector(left_words, right_words, distance_type, ds1, ds1)
+  } else {
+    # Si son diferentes, calculamos las 4 combinaciones cruzadas
+    col11 <- paste0(dist_lbl, " (", lbl1, " → ", lbl1, ")")
+    col22 <- paste0(dist_lbl, " (", lbl2, " → ", lbl2, ")")
+    col12 <- paste0(dist_lbl, " (", lbl1, " → ", lbl2, ")")
+    col21 <- paste0(dist_lbl, " (", lbl2, " → ", lbl1, ")")
+    
+    tab[[col11]] <- pairwise_dist_vector(left_words, right_words, distance_type, ds1, ds1)
+    tab[[col22]] <- pairwise_dist_vector(left_words, right_words, distance_type, ds2, ds2)
+    tab[[col12]] <- pairwise_dist_vector(left_words, right_words, distance_type, ds1, ds2)
+    tab[[col21]] <- pairwise_dist_vector(left_words, right_words, distance_type, ds2, ds1)
+  }
+  
+  tab
+}
+
+# One-to-many 
+distance_table_for_one_many <- function(left_word, right_words, distance_type, ds1, ds2) {
+  distance_table_for_word_pairs(rep(left_word, length(right_words)), right_words, distance_type, ds1, ds2)
+}
+
+# Many-to-many: Regresa una lista con 4 matrices basadas en ds1 y ds2
+distance_matrices_for_word_pairs <- function(left_words, right_words, distance_type, ds1, ds2, max_words=Inf) {
+  if (length(left_words) == 0 || length(right_words) == 0) return(NULL)
+  if (length(left_words) > max_words) left_words <- left_words[1:max_words]
+  if (length(right_words) > max_words) right_words <- right_words[1:max_words]
+  
+  build <- function(dsL, dsR) {
+    dfL <- get_norms(dsL); dfR <- get_norms(dsR)
+    L <- left_words[left_words %in% dfL$Word]
+    R <- right_words[right_words %in% dfR$Word]
+    if (length(L) == 0 || length(R) == 0) return(NULL)
+    
+    ML <- matrix_for_words(L, ds = dsL)
+    MR <- matrix_for_words(R, ds = dsR)
+    
+    if (distance_type == "mahalanobis") {
+      covL <- get_covariance_matrix(dsL)
+      dmx <- distance_matrix(ML, MR, distance_type, covariance_matrix = covL)
+    } else {
+      dmx <- distance_matrix(ML, MR, distance_type)
+    }
+    
+    out <- data.frame(dmx, row.names = L)
+    names(out) <- R
+    out
+  }
+  
+  # Conservamos las llaves AA, BB, AB, BA para que el server.r no tenga que cambiar drásticamente
+  if (ds1 == ds2) {
+    list(
+      AA = build(ds1, ds1),
+      BB = NULL,
+      AB = NULL,
+      BA = NULL
+    )
+  } else {
+    list(
+      AA = build(ds1, ds1),
+      BB = build(ds2, ds2),
+      AB = build(ds1, ds2),
+      BA = build(ds2, ds1)
+    )
+  }
+}
+
+# Helper 
+distance_list_from_matrix <- function(distance_mx, distance_type) {
+  left_words <- rownames(distance_mx)
+  rownames(distance_mx) <- NULL
+  distance_mx <- cbind(left_words, distance_mx)
+  list_table <- distance_mx %>% tidyr::pivot_longer(!left_words, names_to = "Word 2", values_to = "distance")
+  names(list_table) <- c("Word 1", "Word 2", distance_col_name(distance_type))
+  list_table
+}

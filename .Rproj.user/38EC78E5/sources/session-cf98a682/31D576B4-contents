@@ -1,0 +1,25 @@
+tab_about <- tabPanel(
+  title = "About",
+  includeMarkdown("ui/page_text/about.md"),
+  tags$hr(),
+  tags$h4("Two datasets + cross-dataset distances"),
+  tags$p("This version can compute distances within each dataset and across datasets. For example:"),
+  tags$ul(
+    tags$li(tags$b("A→A"), ": DeepSeek within-dataset distances"),
+    tags$li(tags$b("B→B"), ": Lancaster within-dataset distances"),
+    tags$li(tags$b("A→B"), ": DeepSeek → Lancaster cross-dataset distances"),
+    tags$li(tags$b("B→A"), ": Lancaster → DeepSeek cross-dataset distances")
+  ),
+  tags$p("In Visualise, each input word can appear twice: word@DeepSeek and word@Lancaster (coloured by dataset).")
+)
+
+tab_news <- tabPanel(
+  title = "News and updates",
+  includeMarkdown("ui/page_text/news.md")
+)
+
+page_about <- navbarMenu(
+  "About",
+  tab_about,
+  tab_news
+)

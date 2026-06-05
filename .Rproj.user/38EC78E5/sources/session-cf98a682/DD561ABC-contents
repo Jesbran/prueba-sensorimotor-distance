@@ -1,0 +1,54 @@
+source("ui/shared_elements.r")
+
+page_neighbours <- tabPanel(
+  title = "Nearest neighbours",
+  sidebarLayout(
+    sidebarPanel(
+      h3("Nearest neighbours"),
+      aboutText(includeMarkdown("ui/page_text/neighbours.md")),
+      
+      # CAMBIO: Selector desplegable para manejar todos los datasets
+      selectInput(
+        inputId = "neighbours_dataset",
+        label = "Dataset",
+        choices = setNames(names(DATASETS), sapply(DATASETS, function(x) x$label)),
+        selected = names(DATASETS)[1]
+      ),
+      
+      textInput(inputId = "neighbour_word", label = "Concept"),
+      helpText(includeMarkdown("ui/help_text/text_entry_word.md")),
+      
+      conditionalPanel(
+        condition = "input.neighbour_word.length == 0",
+        actionButton("neighbour_word_button_random", label = "Random word"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      conditionalPanel(
+        condition = "input.neighbour_word.length > 0",
+        actionButton("neighbour_word_button_clear", label = "Clear"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      
+      summaryText("neighbour_word_summary"),
+      
+      numericInput("neighbours_count", "Number of neighbours", value = 10, min = 1, max = 200),
+      
+      textInput(inputId = "neighbour_radius", label = "Max distance (leave blank for any)", value = ""),
+      conditionalPanel(
+        condition = "input.neighbour_radius.length > 0",
+        actionButton("neighbour_button_any_distance", label = "Any distance"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      
+      summaryText("neighbour_radius_summary"),
+      distance_select_with_id("neighbours")
+    ),
+    mainPanel(
+      checkboxInput("will_show_results_neighbours", label="") %>% tagAppendAttributes(class = 'hidden'),
+      conditionalPanel(
+        condition = "input.will_show_results_neighbours == 1",
+        # El título dinámico se genera en el server
+        h4(textOutput("neighbour_title")),
+        downloadButton(outputId = "neighbour_table_download", label = "Download neighbours [.csv]"),
+        tableOutput(outputId = "neighbours_table")
+      )
+    )
+  )
+)

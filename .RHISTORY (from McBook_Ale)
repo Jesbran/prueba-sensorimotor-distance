@@ -1,0 +1,488 @@
+# ------------------ CONFIG ------------------
+base_dir <- path.expand("~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Archivos_Lancaster_para_LLMs/Shiny/sensorimotor-distance-LLMs")
+data_dir <- file.path(base_dir, "app", "data")
+deepseek_csv <- file.path(data_dir, "sensorimotor_norms_DeepSeek_t0.csv")
+lancaster_xlsx <- file.path(data_dir, "Lancaster_sensorimotor_norms_for_39707_words.xlsx")
+dims <- 3
+distances <- c("cosine", "euclidean", "minkowski-3", "correlation", "mahalanobis")
+perplexity <- 30
+max_iter <- 1000
+eta <- 200
+seed <- 1
+# paquetes
+pkgs <- c("Rtsne", "proxy", "readxl")
+to_install <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+if (length(to_install)) install.packages(to_install)
+library(Rtsne)
+library(proxy)
+library(readxl)
+feature_cols <- c(
+"Auditory.mean","Gustatory.mean","Haptic.mean","Interoceptive.mean","Olfactory.mean","Visual.mean",
+"Foot_leg.mean","Hand_arm.mean","Head.mean","Mouth.mean","Torso.mean"
+)
+canonise_word <- function(x) tolower(trimws(gsub("\\s+", " ", x)))
+standardise_norms <- function(df) {
+stopifnot("Word" %in% names(df))
+df$Word <- canonise_word(df$Word)
+df
+}
+write_cache_bin <- function(mat, bin_path) {
+stopifnot(is.matrix(mat))
+con <- file(bin_path, "wb")
+on.exit(close(con), add = TRUE)
+writeBin(as.integer(nrow(mat)), con, size = 4, endian = "little")
+writeBin(as.integer(ncol(mat)), con, size = 4, endian = "little")
+for (j in seq_len(ncol(mat))) {
+writeBin(as.double(mat[, j]), con, size = 8, endian = "little")
+}
+}
+mahalanobis_dist <- function(X) {
+S  <- cov(X)
+VI <- solve(S)
+R  <- chol(VI)
+X2 <- X %*% R
+as.matrix(dist(X2, method = "euclidean"))
+}
+distance_matrix <- function(X, distance_name) {
+dn <- tolower(distance_name)
+if (dn == "euclidean") return(as.matrix(dist(X, method = "euclidean")))
+if (dn == "minkowski-3") return(as.matrix(dist(X, method = "minkowski", p = 3)))
+if (dn %in% c("cosine", "correlation")) return(as.matrix(proxy::dist(X, method = dn)))
+if (dn == "mahalanobis") return(mahalanobis_dist(X))
+stop("Distancia no soportada: ", distance_name)
+}
+compute_tsne <- function(X, dims, distance_name) {
+if (!all(is.finite(X))) stop("X contiene NA/Inf. Limpia/imputa antes de t-SNE.")
+D <- distance_matrix(X, distance_name)
+set.seed(seed)
+fit <- Rtsne(
+D, is_distance = TRUE, dims = dims,
+perplexity = perplexity, max_iter = max_iter, eta = eta,
+check_duplicates = FALSE, verbose = TRUE
+)
+fit$Y
+}
+# -------- cargar datasets --------
+if (!file.exists(deepseek_csv)) stop("No encuentro: ", deepseek_csv)
+if (!file.exists(lancaster_xlsx)) stop("No encuentro: ", lancaster_xlsx)
+norms_A <- standardise_norms(read.csv(deepseek_csv, stringsAsFactors = FALSE))
+norms_B <- standardise_norms(as.data.frame(readxl::read_excel(lancaster_xlsx), stringsAsFactors = FALSE))
+# Validación columnas
+missA <- setdiff(feature_cols, names(norms_A))
+missB <- setdiff(feature_cols, names(norms_B))
+if (length(missA)) stop("DeepSeek: faltan columnas: ", paste(missA, collapse=", "))
+if (length(missB)) stop("Lancaster: faltan columnas: ", paste(missB, collapse=", "))
+X_A <- as.matrix(norms_A[, feature_cols]); storage.mode(X_A) <- "double"
+X_B <- as.matrix(norms_B[, feature_cols]); storage.mode(X_B) <- "double"
+dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+# -------- precompute --------
+run_for_dataset <- function(X, ds_tag) {
+for (d in distances) {
+message("\n=== Dataset ", ds_tag, " | distance=", d, " | dims=", dims, " ===")
+Y <- compute_tsne(X, dims = dims, distance_name = d)
+out <- file.path(data_dir, sprintf("t-SNE_%d_%s_cache_%s.bin", dims, tolower(d), ds_tag))
+write_cache_bin(Y, out)
+message("Guardado: ", out)
+}
+}
+run_for_dataset(X_A, "A")
+run_for_dataset(X_B, "B")
+message("\nListo. Archivos generados:")
+print(list.files(data_dir, pattern = "^t-SNE_3_.*_cache_[AB]\\.bin$", full.names = TRUE))
+# ------------------ CONFIG ------------------
+base_dir <- path.expand("~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Archivos_Lancaster_para_LLMs/Shiny/sensorimotor-distance-LLMs")
+data_dir <- file.path(base_dir, "app", "data")
+deepseek_csv <- file.path(data_dir, "sensorimotor_norms_DeepSeek_t0.csv")
+lancaster_csv <- file.path(data_dir, "Lancaster_norms_matches_unique.csv")
+dims <- 3
+distances <- c("cosine", "euclidean", "minkowski-3", "correlation", "mahalanobis")
+perplexity <- 30
+max_iter <- 1000
+eta <- 200
+seed <- 1
+# paquetes
+pkgs <- c("Rtsne", "proxy", "readxl")
+to_install <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+if (length(to_install)) install.packages(to_install)
+library(Rtsne)
+library(proxy)
+library(readxl)
+feature_cols <- c(
+"Auditory.mean","Gustatory.mean","Haptic.mean","Interoceptive.mean","Olfactory.mean","Visual.mean",
+"Foot_leg.mean","Hand_arm.mean","Head.mean","Mouth.mean","Torso.mean"
+)
+canonise_word <- function(x) tolower(trimws(gsub("\\s+", " ", x)))
+standardise_norms <- function(df) {
+stopifnot("Word" %in% names(df))
+df$Word <- canonise_word(df$Word)
+df
+}
+write_cache_bin <- function(mat, bin_path) {
+stopifnot(is.matrix(mat))
+con <- file(bin_path, "wb")
+on.exit(close(con), add = TRUE)
+writeBin(as.integer(nrow(mat)), con, size = 4, endian = "little")
+writeBin(as.integer(ncol(mat)), con, size = 4, endian = "little")
+for (j in seq_len(ncol(mat))) {
+writeBin(as.double(mat[, j]), con, size = 8, endian = "little")
+}
+}
+mahalanobis_dist <- function(X) {
+S  <- cov(X)
+VI <- solve(S)
+R  <- chol(VI)
+X2 <- X %*% R
+as.matrix(dist(X2, method = "euclidean"))
+}
+distance_matrix <- function(X, distance_name) {
+dn <- tolower(distance_name)
+if (dn == "euclidean") return(as.matrix(dist(X, method = "euclidean")))
+if (dn == "minkowski-3") return(as.matrix(dist(X, method = "minkowski", p = 3)))
+if (dn %in% c("cosine", "correlation")) return(as.matrix(proxy::dist(X, method = dn)))
+if (dn == "mahalanobis") return(mahalanobis_dist(X))
+stop("Distancia no soportada: ", distance_name)
+}
+compute_tsne <- function(X, dims, distance_name) {
+if (!all(is.finite(X))) stop("X contiene NA/Inf. Limpia/imputa antes de t-SNE.")
+D <- distance_matrix(X, distance_name)
+set.seed(seed)
+fit <- Rtsne(
+D, is_distance = TRUE, dims = dims,
+perplexity = perplexity, max_iter = max_iter, eta = eta,
+check_duplicates = FALSE, verbose = TRUE
+)
+fit$Y
+}
+# -------- cargar datasets --------
+if (!file.exists(deepseek_csv)) stop("No encuentro: ", deepseek_csv)
+if (!file.exists(lancaster_csv)) stop("No encuentro: ", lancaster_csv)
+norms_A <- standardise_norms(read.csv(deepseek_csv, stringsAsFactors = FALSE))
+norms_B <- standardise_norms(as.data.frame(readxl::read_excel(lancaster_csv), stringsAsFactors = FALSE))
+# Validación columnas
+missA <- setdiff(feature_cols, names(norms_A))
+missB <- setdiff(feature_cols, names(norms_B))
+# ------------------ CONFIG ------------------
+base_dir <- path.expand("~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Archivos_Lancaster_para_LLMs/Shiny/sensorimotor-distance-LLMs")
+data_dir <- file.path(base_dir, "app", "data")
+deepseek_csv <- file.path(data_dir, "sensorimotor_norms_DeepSeek_t0.csv")
+lancaster_csv <- file.path(data_dir, "Lancaster_norms_matches_unique.csv")
+dims <- 3
+distances <- c("cosine", "euclidean", "minkowski-3", "correlation", "mahalanobis")
+perplexity <- 30
+max_iter <- 1000
+eta <- 200
+seed <- 1
+# paquetes
+pkgs <- c("Rtsne", "proxy", "readxl")
+to_install <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+if (length(to_install)) install.packages(to_install)
+library(Rtsne)
+library(proxy)
+library(readxl)
+feature_cols <- c(
+"Auditory.mean","Gustatory.mean","Haptic.mean","Interoceptive.mean","Olfactory.mean","Visual.mean",
+"Foot_leg.mean","Hand_arm.mean","Head.mean","Mouth.mean","Torso.mean"
+)
+canonise_word <- function(x) tolower(trimws(gsub("\\s+", " ", x)))
+standardise_norms <- function(df) {
+stopifnot("Word" %in% names(df))
+df$Word <- canonise_word(df$Word)
+df
+}
+write_cache_bin <- function(mat, bin_path) {
+stopifnot(is.matrix(mat))
+con <- file(bin_path, "wb")
+on.exit(close(con), add = TRUE)
+writeBin(as.integer(nrow(mat)), con, size = 4, endian = "little")
+writeBin(as.integer(ncol(mat)), con, size = 4, endian = "little")
+for (j in seq_len(ncol(mat))) {
+writeBin(as.double(mat[, j]), con, size = 8, endian = "little")
+}
+}
+mahalanobis_dist <- function(X) {
+S  <- cov(X)
+VI <- solve(S)
+R  <- chol(VI)
+X2 <- X %*% R
+as.matrix(dist(X2, method = "euclidean"))
+}
+distance_matrix <- function(X, distance_name) {
+dn <- tolower(distance_name)
+if (dn == "euclidean") return(as.matrix(dist(X, method = "euclidean")))
+if (dn == "minkowski-3") return(as.matrix(dist(X, method = "minkowski", p = 3)))
+if (dn %in% c("cosine", "correlation")) return(as.matrix(proxy::dist(X, method = dn)))
+if (dn == "mahalanobis") return(mahalanobis_dist(X))
+stop("Distancia no soportada: ", distance_name)
+}
+compute_tsne <- function(X, dims, distance_name) {
+if (!all(is.finite(X))) stop("X contiene NA/Inf. Limpia/imputa antes de t-SNE.")
+D <- distance_matrix(X, distance_name)
+set.seed(seed)
+fit <- Rtsne(
+D, is_distance = TRUE, dims = dims,
+perplexity = perplexity, max_iter = max_iter, eta = eta,
+check_duplicates = FALSE, verbose = TRUE
+)
+fit$Y
+}
+# -------- cargar datasets --------
+if (!file.exists(deepseek_csv)) stop("No encuentro: ", deepseek_csv)
+if (!file.exists(lancaster_csv)) stop("No encuentro: ", lancaster_csv)
+norms_A <- standardise_norms(read.csv(deepseek_csv, stringsAsFactors = FALSE))
+norms_B <- standardise_norms(read.csv(lancaster_csv, stringsAsFactors = FALSE))
+# Validación columnas
+missA <- setdiff(feature_cols, names(norms_A))
+missB <- setdiff(feature_cols, names(norms_B))
+if (length(missA)) stop("DeepSeek: faltan columnas: ", paste(missA, collapse=", "))
+if (length(missB)) stop("Lancaster: faltan columnas: ", paste(missB, collapse=", "))
+X_A <- as.matrix(norms_A[, feature_cols]); storage.mode(X_A) <- "double"
+X_B <- as.matrix(norms_B[, feature_cols]); storage.mode(X_B) <- "double"
+dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+# -------- precompute --------
+run_for_dataset <- function(X, ds_tag) {
+for (d in distances) {
+message("\n=== Dataset ", ds_tag, " | distance=", d, " | dims=", dims, " ===")
+Y <- compute_tsne(X, dims = dims, distance_name = d)
+out <- file.path(data_dir, sprintf("t-SNE_%d_%s_cache_%s.bin", dims, tolower(d), ds_tag))
+write_cache_bin(Y, out)
+message("Guardado: ", out)
+}
+}
+run_for_dataset(X_A, "A")
+run_for_dataset(X_B, "B")
+message("\nListo. Archivos generados:")
+print(list.files(data_dir, pattern = "^t-SNE_3_.*_cache_[AB]\\.bin$", full.names = TRUE))
+shiny::runApp('app')
+runApp('app')
+runApp('app')
+runApp('app')
+runApp('app')
+runApp('app')
+runApp('app')
+tab_one_to_one <- tabPanel(
+title = "One-to-one",
+sidebarLayout(
+sidebarPanel(
+h3("Calculate distances between concepts:"),
+h4("One-to-one"),
+aboutText(includeMarkdown("ui/page_text/distances_one_one.md")),
+tags$div(
+tags$em("Outputs include within-dataset (A→A, B→B) and cross-dataset (A→B, B→A) distances when available.")
+),
+textAreaInput(
+inputId = "one_one_word_pairs",
+label = "Concept pairs",
+rows = 10
+),
+helpText(includeMarkdown("ui/help_text/text_entry_pairs.md")),
+conditionalPanel(
+condition = "input.one_one_word_pairs.length == 0",
+actionButton("one_one_button_random_pairs", label = "Random word pairs")
+) %>% tagAppendAttributes(class = "inline"),
+conditionalPanel(
+condition = "input.one_one_word_pairs.length > 0",
+actionButton("one_one_button_clear", label = "Clear"),
+) %>% tagAppendAttributes(class = "inline"),
+summaryText("one_one_summary_pairs"),
+distance_select_with_id("one_one")
+),
+mainPanel(
+checkboxInput("will_show_results_one_one", label="") %>% tagAppendAttributes(class = 'hidden'),
+conditionalPanel(
+condition = "input.will_show_results_one_one == 1",
+downloadButton(outputId = "one_one_table_download",
+label = "Download distance list [.csv]"),
+tableOutput(outputId = "one_one_distances_table")
+)
+)
+)
+)
+runApp('app')
+setwd("~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Autismo")
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(purrr)
+# =========================
+# 1) Función para limpiar un Excel con encabezados en 4 filas
+#    (tarea / Px / medida / submedida) y datos desde la fila 5
+# =========================
+clean_long_excel <- function(path) {
+raw <- read_excel(path, col_names = FALSE)
+# Encabezados por fila (0-index mental):
+# Fila 1: "Detección Olfativa" / "Detección temperatura"
+# Fila 2: "P8" "P12" "P16" "P20"
+# Fila 3: "LATENCIA" "PERMANENCIA" ...
+# Fila 4: "FAM" "NOV" ...
+h0 <- raw %>% slice(1) %>% unlist(use.names = FALSE)
+h1 <- raw %>% slice(2) %>% unlist(use.names = FALSE)
+h2 <- raw %>% slice(3) %>% unlist(use.names = FALSE)
+h3 <- raw %>% slice(4) %>% unlist(use.names = FALSE)
+# Forward-fill horizontal para propagar etiquetas dentro de cada bloque
+ff <- function(x) {
+out <- x
+for (i in seq_along(out)) {
+if (is.na(out[i]) && i > 1) out[i] <- out[i-1]
+}
+out
+}
+h0 <- ff(h0)
+h1 <- ff(h1)
+h2 <- ff(h2)
+# Construcción de nombres
+make_name <- function(i) {
+# Columnas 1-4 son metadatos (según tus archivos reales)
+if (i == 1) return("ANIMAL")    # a veces dice RATONA
+if (i == 2) return("CODIGO")    # p.ej. 902 o "2R"
+if (i == 3) return("SEXO")
+if (i == 4) return("ID")
+parts <- c(h0[i], h1[i], h2[i], h3[i]) %>%
+discard(is.na) %>%
+as.character() %>%
+str_trim() %>%
+discard(~ .x == "")
+nm <- str_c(parts, collapse = "_") %>%
+str_replace_all("\\s+", "_") %>%
+str_replace_all("[^[:alnum:]_áéíóúÁÉÍÓÚñÑ]+", "_")
+nm
+}
+new_names <- map_chr(seq_len(ncol(raw)), make_name)
+# Datos comienzan en la fila 5 (después de 4 filas de encabezado)
+df <- raw %>%
+slice(-(1:4)) %>%
+setNames(new_names) %>%
+filter(!is.na(ID)) %>%
+mutate(
+# Asegura caracteres limpios
+SEXO = as.character(SEXO),
+ID   = as.character(ID),
+# CONDICION desde ID: si contiene EXP -> EXP, si contiene CTRL -> CTRL
+CONDICION = case_when(
+str_detect(ID, regex("EXP",  ignore_case = TRUE))  ~ "EXP",
+str_detect(ID, regex("CTRL", ignore_case = TRUE))  ~ "CTRL",
+TRUE ~ NA_character_
+)
+)
+# Convierte a numérico todo menos metadatos
+meta <- c("ANIMAL", "CODIGO", "SEXO", "ID", "CONDICION")
+df <- df %>%
+mutate(across(setdiff(names(df), meta), ~ suppressWarnings(as.numeric(.x))))
+df
+}
+# =========================
+# 2) Cargar y unificar VPA + CTRL
+# =========================
+df_vpa  <- clean_long_excel("/mnt/data/BD_Long_VPA.xlsx")
+# =========================
+# 1) Función para limpiar un Excel con encabezados en 4 filas
+#    (tarea / Px / medida / submedida) y datos desde la fila 5
+# =========================
+clean_long_excel <- function(path) {
+raw <- read_excel(~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Autismo, col_names = FALSE)
+# =========================
+# 1) Función para limpiar un Excel con encabezados en 4 filas
+#    (tarea / Px / medida / submedida) y datos desde la fila 5
+# =========================
+clean_long_excel <- function(path) {
+raw <- read_excel(path, col_names = FALSE)
+# Encabezados por fila (0-index mental):
+# Fila 1: "Detección Olfativa" / "Detección temperatura"
+# Fila 2: "P8" "P12" "P16" "P20"
+# Fila 3: "LATENCIA" "PERMANENCIA" ...
+# Fila 4: "FAM" "NOV" ...
+h0 <- raw %>% slice(1) %>% unlist(use.names = FALSE)
+h1 <- raw %>% slice(2) %>% unlist(use.names = FALSE)
+h2 <- raw %>% slice(3) %>% unlist(use.names = FALSE)
+h3 <- raw %>% slice(4) %>% unlist(use.names = FALSE)
+# Forward-fill horizontal para propagar etiquetas dentro de cada bloque
+ff <- function(x) {
+out <- x
+for (i in seq_along(out)) {
+if (is.na(out[i]) && i > 1) out[i] <- out[i-1]
+}
+out
+}
+h0 <- ff(h0)
+h1 <- ff(h1)
+h2 <- ff(h2)
+# Construcción de nombres
+make_name <- function(i) {
+# Columnas 1-4 son metadatos (según tus archivos reales)
+if (i == 1) return("ANIMAL")    # a veces dice RATONA
+if (i == 2) return("CODIGO")    # p.ej. 902 o "2R"
+if (i == 3) return("SEXO")
+if (i == 4) return("ID")
+parts <- c(h0[i], h1[i], h2[i], h3[i]) %>%
+discard(is.na) %>%
+as.character() %>%
+str_trim() %>%
+discard(~ .x == "")
+nm <- str_c(parts, collapse = "_") %>%
+str_replace_all("\\s+", "_") %>%
+str_replace_all("[^[:alnum:]_áéíóúÁÉÍÓÚñÑ]+", "_")
+nm
+}
+new_names <- map_chr(seq_len(ncol(raw)), make_name)
+# Datos comienzan en la fila 5 (después de 4 filas de encabezado)
+df <- raw %>%
+slice(-(1:4)) %>%
+setNames(new_names) %>%
+filter(!is.na(ID)) %>%
+mutate(
+# Asegura caracteres limpios
+SEXO = as.character(SEXO),
+ID   = as.character(ID),
+# CONDICION desde ID: si contiene EXP -> EXP, si contiene CTRL -> CTRL
+CONDICION = case_when(
+str_detect(ID, regex("EXP",  ignore_case = TRUE))  ~ "EXP",
+str_detect(ID, regex("CTRL", ignore_case = TRUE))  ~ "CTRL",
+TRUE ~ NA_character_
+)
+)
+# Convierte a numérico todo menos metadatos
+meta <- c("ANIMAL", "CODIGO", "SEXO", "ID", "CONDICION")
+df <- df %>%
+mutate(across(setdiff(names(df), meta), ~ suppressWarnings(as.numeric(.x))))
+df
+}
+# =========================
+# 2) Cargar y unificar VPA + CTRL
+# =========================
+df_vpa  <- clean_long_excel("BD_Long_VPA.xlsx")
+df_ctrl <- clean_long_excel("BD_Long_CTRL.xlsx")
+View(df_ctrl)
+df_all <- bind_rows(df_vpa, df_ctrl)
+# =========================
+# 3) Versión en formato largo (ideal para Shiny)
+#    Separa: TAREA / PX / VARIABLE
+# =========================
+df_long <- df_all %>%
+pivot_longer(
+cols = -c(ANIMAL, CODIGO, SEXO, ID, CONDICION),
+names_to = "colname",
+values_to = "value"
+) %>%
+# Ejemplo de colname: "Detección_Olfativa_P8_LATENCIA_FAM"
+extract(
+col = colname,
+into = c("TAREA", "PUNTO", "VARIABLE"),
+regex = "^(.*)_(P\\d+)_(.*)$",
+remove = TRUE
+) %>%
+mutate(
+# Normaliza nombres de tarea para UI (opcional)
+TAREA = str_replace_all(TAREA, "_", " "),
+# Filtra sólo P8/P12/P16 si eso es lo que usarás en la app
+# (descomenta si quieres que el dataset final ya venga recortado)
+# PUNTO = factor(PUNTO, levels = c("P8","P12","P16","P20"))
+)
+# =========================
+# 4) Guardar outputs listos para Shiny
+# =========================
+saveRDS(df_all,  "df_all_wide.rds")   # útil si prefieres seleccionar columnas directamente
+saveRDS(df_long, "df_all_long.rds")   # útil para menús dinámicos (TAREA/PUNTO/VARIABLE)
+# También puedes exportar CSV:
+readr::write_csv(df_long, "df_all_long.csv")
+runApp('~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Archivos_Lancaster_para_LLMs/Shiny/sensorimotor-distance-LLMs/app')
+shiny::runApp('app')

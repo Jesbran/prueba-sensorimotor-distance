@@ -1,0 +1,26 @@
+{
+    "id": "9364A57C",
+    "path": "~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Archivos_Lancaster_para_LLMs/Shiny/sensorimotor-distance-LLMs_2/app/calculate/distance.r",
+    "project_path": "app/calculate/distance.r",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1775101950305.0,
+    "source_on_save": false,
+    "relative_order": 6,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "68,8",
+        "scrollLine": "54"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1774582025,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1774582025,
+    "read_only": false,
+    "read_only_alternatives": []
+}

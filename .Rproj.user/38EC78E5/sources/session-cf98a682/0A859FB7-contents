@@ -1,0 +1,263 @@
+body {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 28px 32px 40px 32px;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #222222;
+  background-color: #ffffff;
+  font-family: Georgia, "Times New Roman", Times, serif;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5 {
+  color: #111111;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin-top: 0.4em;
+  margin-bottom: 0.7em;
+}
+
+p, li, label, span, div {
+  color: #222222;
+}
+
+blockquote {
+  font-size: inherit;
+  color: #444444;
+  border-left: 3px solid #cfcfcf;
+  padding-left: 14px;
+  margin-left: 0;
+  font-style: italic;
+}
+
+/* Utility classes */
+.hidden {
+  display: none;
+}
+
+.summary {
+  color: #666666;
+  font-size: 0.95em;
+}
+
+.inline {
+  display: inline-block;
+  margin-right: 10px;
+  margin-bottom: 8px;
+}
+
+/* Main panels */
+.well {
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  box-shadow: none;
+  padding: 22px;
+}
+
+.main-panel, .mainPanel {
+  background: transparent;
+}
+
+/* Sidebar headings */
+form h3 {
+  margin-top: 0;
+  margin-bottom: 14px;
+  color: #111111;
+  font-weight: 700;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Labels */
+.control-label {
+  margin-top: 14px;
+  margin-bottom: 6px;
+  font-weight: 700;
+  color: #222222;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.95em;
+}
+
+/* Inputs */
+.form-control {
+  background-color: #ffffff;
+  border: 1px solid #cfcfcf;
+  color: #222222;
+  border-radius: 4px;
+  min-height: 40px;
+  box-shadow: none;
+  transition: border-color 0.2s ease;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.95em;
+}
+
+.form-control:focus {
+  border-color: #8a8a8a;
+  box-shadow: none;
+  color: #111111;
+}
+
+/* Textareas */
+textarea.form-control {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Selectize */
+.selectize-input,
+.selectize-control.single .selectize-input {
+  background: #ffffff !important;
+  border: 1px solid #cfcfcf !important;
+  color: #222222 !important;
+  border-radius: 4px !important;
+  min-height: 40px;
+  padding: 8px 10px;
+  box-shadow: none !important;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.95em;
+}
+
+.selectize-input.focus {
+  border-color: #8a8a8a !important;
+  box-shadow: none !important;
+}
+
+.selectize-dropdown {
+  background: #ffffff !important;
+  border: 1px solid #cfcfcf !important;
+  border-radius: 4px !important;
+  color: #222222 !important;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.selectize-dropdown .active {
+  background: #f3f3f3 !important;
+  color: #111111 !important;
+}
+
+/* Buttons */
+.btn {
+  border-radius: 4px;
+  border: 1px solid #bdbdbd;
+  background: #ffffff;
+  color: #222222;
+  font-weight: 600;
+  padding: 8px 14px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  box-shadow: none;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.btn:hover,
+.btn:focus {
+  background: #f5f5f5;
+  border-color: #8f8f8f;
+  color: #111111;
+}
+
+.btn-primary {
+  background: #222222;
+  border: 1px solid #222222;
+  color: #ffffff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: #3a3a3a;
+  border-color: #3a3a3a;
+  color: #ffffff;
+}
+
+/* Checkbox */
+.checkbox label {
+  color: #222222;
+  font-weight: 400;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Help and about text */
+.help-block {
+  margin-top: 6px;
+  margin-bottom: 14px;
+  border-radius: 4px;
+  background: #fafafa;
+  color: #555555;
+  font-size: 0.9em;
+  padding: 10px 12px;
+  border: 1px solid #e2e2e2;
+}
+
+.about-block {
+  color: #444444;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  background: #fcfcfc;
+  border-left: 3px solid #d6d6d6;
+}
+
+/* Tabs */
+.nav-tabs {
+  border-bottom: 1px solid #d9d9d9;
+  margin-bottom: 18px;
+}
+
+.nav-tabs > li > a {
+  color: #555555;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-weight: 600;
+  padding: 10px 14px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.nav-tabs > li > a:hover {
+  color: #111111;
+  background: #f7f7f7;
+  border: none;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:focus,
+.nav-tabs > li.active > a:hover {
+  color: #111111;
+  background: #ffffff;
+  border: none;
+  border-bottom: 2px solid #111111;
+}
+
+/* Plot outputs */
+.js-plotly-plot,
+.plotly,
+.shiny-plot-output {
+  border-radius: 0;
+}
+
+/* Footer */
+.footer {
+  margin-top: 48px;
+  padding-top: 18px;
+  font-size: 0.78em;
+  color: #666666;
+  border-top: 1px solid #d9d9d9;
+}
+
+.footer img {
+  height: 26pt;
+  margin-right: 20pt;
+  vertical-align: middle;
+}
+
+/* Links */
+a {
+  color: #1a4f8b;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #103a68;
+  text-decoration: underline;
+}

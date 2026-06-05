@@ -1,0 +1,113 @@
+# meta.r
+# publication.major.minor
+meta_version = "1.0.1"
+
+# Display precision of floating points
+precision <- 6
+
+# Maximum row/column count for tables
+max_table_size <- 200
+
+# Maximum number of words to submit to MDS
+max_words_mds <- 20
+
+# Maximum number of words to submit to distance matrix
+max_words_distance_matrtix <- 200
+
+# Location of data files
+data_dir = "data/"
+
+# Required libraries for data handling
+library(tools)
+library(readxl)
+library(dplyr)
+
+# --- Helper Function: Read CSV or XLSX ---
+read_any_data <- function(path) {
+  ext <- tolower(file_ext(path))
+  
+  if (ext == "csv") {
+    return(read.csv(path, stringsAsFactors = FALSE))
+  } else if (ext == "xlsx" || ext == "xls") {
+    # Convert to data.frame to ensure compatibility with standard R operations
+    return(as.data.frame(read_excel(path)))
+  } else {
+    stop(paste("Unsupported file format:", ext))
+  }
+}
+
+# --- Dataset Configuration ---
+# All available datasets for comparison
+dataset_config <- list(
+  en_human     = list(label = "English (Human)", file = "sensorimotor_norms_Lancaster_matched.csv"),
+  en_GPT       = list(label = "English (GPT)", file = "GPT_sensorimotor_norms_T0_English.csv"),
+  en_deepseek  = list(label = "English (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_English.csv"),
+  ch_human     = list(label = "Chinese (Human)", file = "Chinese_sensorimotor_norms.csv"),
+  ch_GPT       = list(label = "Chinese (GPT)", file = "GPT_sensorimotor_norms_T0_Chinese.csv"),
+  ch_deepseek  = list(label = "Chinese (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Chinese.csv"),
+  cr_human     = list(label = "Croatian (Human)", file = "Croatian_sensorimotor_norms.csv"),
+  cr_GPT       = list(label = "Croatian (GPT)", file = "GPT_sensorimotor_norms_T0_Croatian.csv"),
+  cr_deepseek  = list(label = "Croatian (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Croatian.csv"),
+  it_human     = list(label = "Italian (Human)", file = "Italian_sensorimotor_norms.csv"),
+  it_GPT       = list(label = "Italian (GPT)", file = "GPT_sensorimotor_norms_T0_Italian.csv"),
+  it_deepseek  = list(label = "Italian (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Italian.csv"),
+  es_human     = list(label = "Spanish (Human)", file = "spanish_mex_sensorimotor_norms.csv"),
+  es_GPT       = list(label = "Spanish (GPT)", file = "GPT_sensorimotor_norms_T0_Spanish.csv"),
+  es_deepseek  = list(label = "Spanish (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Spanish.csv")
+)
+
+
+
+# Note: The actual loading into the DATASETS object happens in calculate/norms.r 
+# to ensure that sensory_columns and standardise_norms are defined first.
+
+# --- Generic Accessor Functions ---
+
+# Access norms by dataset ID
+get_norms <- function(ds) DATASETS[[ds]]$norms
+
+# Access display label by dataset ID
+dataset_label <- function(ds) DATASETS[[ds]]$label
+
+# Get all words from a specific dataset
+all_words <- function(ds) get_norms(ds)$Word
+
+# Union of all words across all currently loaded datasets
+all_words_union <- function() {
+  unique(unlist(lapply(DATASETS, function(x) x$norms$Word)))
+}
+
+# Covariance matrix for Mahalanobis calculations
+get_covariance_matrix <- function(ds) {
+  X <- as.matrix(get_norms(ds)[, all_columns])
+  storage.mode(X) <- "double"
+  cov(X)
+}
+
+# Sampling functions for UI pre-fills
+random_norms <- function(n, ds) {
+  vocab <- all_words(ds)
+  sample(vocab, min(n, length(vocab)))
+}
+
+random_norm  <- function(ds) random_norms(1, ds)[1]
+
+random_norm_pairs <- function(n, ds) {
+  pairs <- random_norms(2 * n, ds)
+  if(length(pairs) < 2) return(list())
+  dim(pairs) <- c(length(pairs) / 2, 2)
+  split(pairs, rep(1:nrow(pairs), each = ncol(pairs))) %>% array
+}
+
+# Data retrieval by concept
+vector_for_word <- function(word, ds) {
+  df <- get_norms(ds)
+  df[df$Word == word, all_columns, drop = FALSE]
+}
+
+matrix_for_words <- function(words, ds) {
+  df <- get_norms(ds)
+  mx <- as.matrix(df[match(words, df$Word), all_columns])
+  storage.mode(mx) <- "double"
+  mx
+}

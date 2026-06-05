@@ -1,0 +1,165 @@
+# precompute_tsne_all.R
+# Genera caches t-SNE en formato .bin para los LLMs y las normas
+# y los deja en app/data/ con nombres:
+# t-SNE_3_<distance>.bin
+
+
+# ------------------ CONFIG ------------------
+base_dir <- path.expand("~/Desktop/UNAM/Experimentos/SENSORIMOTOR/PAPIIT/Archivos_Lancaster_para_LLMs/Shiny/sensorimotor-distance-LLMs")
+data_dir <- file.path(base_dir, "app", "data")
+
+# Tu lista completa de configuración
+dataset_config <- list(
+  en_deepseek  = list(label = "English (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_English.csv"),
+  en_GPT       = list(label = "English (GPT)", file = "GPT_sensorimotor_norms_T0_English.csv"),
+  en_human     = list(label = "English (Human)", file = "sensorimotor_norms_Lancaster_matched.csv"),
+  ch_human     = list(label = "Chinese (Human)", file = "SENSORIMOTORNOR_MS_FOR_CHINESE_NOUNS.xlsx"),
+  ch_deepseek  = list(label = "Chinese (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Chinese.csv"),
+  ch_GPT       = list(label = "Chinese (GPT)", file = "GPT_sensorimotor_norms_T0_Chinese.csv"),
+  it_human     = list(label = "Italian (Human)", file = "sensorimotor_norms_italian.xlsx"),
+  it_deepseek  = list(label = "Italian (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Italian.csv"),
+  it_GPT       = list(label = "Italian (GPT)", file = "GPT_sensorimotor_norms_T0_Italian.csv"),
+  cr_human     = list(label = "Croatian (Human)", file = "CROATIAN_NORMS_CORRECTED.xlsx"),
+  cr_deepseek  = list(label = "Croatian (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Croatian.csv"),
+  cr_GPT       = list(label = "Croatian (GPT)", file = "GPT_sensorimotor_norms_T0_Croatian.csv"),
+  es_human     = list(label = "Spanish (Human)", file = "spanish_mex_sensorimotor_norms.csv"),
+  es_deepseek  = list(label = "Spanish (DeepSeek)", file = "DeepSeek_sensorimotor_norms_T0_Spanish.csv"),
+  es_GPT       = list(label = "Spanish (GPT)", file = "GPT_sensorimotor_norms_T0_Spanish.csv")
+)
+
+dims <- 3
+distances <- c("cosine", "euclidean", "minkowski-3", "correlation", "mahalanobis")
+
+perplexity <- 30
+max_iter <- 1000
+eta <- 200
+seed <- 1
+
+feature_cols <- c(
+  "Auditory.mean","Gustatory.mean","Haptic.mean","Interoceptive.mean","Olfactory.mean","Visual.mean",
+  "Foot_leg.mean","Hand_arm.mean","Head.mean","Mouth.mean","Torso.mean"
+)
+# ---------------------------------------------------
+
+# Paquetes necesarios
+pkgs <- c("Rtsne", "proxy", "readxl", "tools", "dplyr")
+to_install <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
+if (length(to_install)) install.packages(to_install)
+
+library(Rtsne)
+library(proxy)
+library(readxl)
+library(tools)
+library(dplyr)
+
+# --- Funciones Auxiliares ---
+
+canonise_word <- function(x) tolower(trimws(gsub("\\s+", " ", x)))
+
+standardise_norms <- function(df) {
+  if (!("Word" %in% names(df))) stop("Column 'Word' is missing")
+  df$Word <- canonise_word(df$Word)
+  df
+}
+
+# Función para leer CSV o XLSX dinámicamente
+read_any_data <- function(path) {
+  ext <- tolower(file_ext(path))
+  if (ext == "csv") {
+    return(read.csv(path, stringsAsFactors = FALSE))
+  } else if (ext %in% c("xlsx", "xls")) {
+    return(as.data.frame(read_excel(path)))
+  } else {
+    stop(paste("Formato no soportado:", ext))
+  }
+}
+
+write_cache_bin <- function(mat, bin_path) {
+  stopifnot(is.matrix(mat))
+  con <- file(bin_path, "wb")
+  on.exit(close(con), add = TRUE)
+  writeBin(as.integer(nrow(mat)), con, size = 4, endian = "little")
+  writeBin(as.integer(ncol(mat)), con, size = 4, endian = "little")
+  for (j in seq_len(ncol(mat))) {
+    writeBin(as.double(mat[, j]), con, size = 8, endian = "little")
+  }
+}
+
+mahalanobis_dist <- function(X) {
+  S  <- cov(X)
+  VI <- solve(S)
+  R  <- chol(VI)
+  X2 <- X %*% R
+  as.matrix(dist(X2, method = "euclidean"))
+}
+
+distance_matrix <- function(X, distance_name) {
+  dn <- tolower(distance_name)
+  if (dn == "euclidean") return(as.matrix(dist(X, method = "euclidean")))
+  if (dn == "minkowski-3") return(as.matrix(dist(X, method = "minkowski", p = 3)))
+  if (dn %in% c("cosine", "correlation")) return(as.matrix(proxy::dist(X, method = dn)))
+  if (dn == "mahalanobis") return(mahalanobis_dist(X))
+  stop("Distancia no soportada: ", distance_name)
+}
+
+compute_tsne <- function(X, dims, distance_name) {
+  if (!all(is.finite(X))) stop("X contiene NA/Inf.")
+  D <- distance_matrix(X, distance_name)
+  set.seed(seed)
+  fit <- Rtsne(D, is_distance = TRUE, dims = dims,
+               perplexity = perplexity, max_iter = max_iter, eta = eta,
+               check_duplicates = FALSE, verbose = FALSE)
+  fit$Y
+}
+
+# --- Bucle de procesamiento principal ---
+
+dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+
+for (ds_id in names(dataset_config)) {
+  cfg <- dataset_config[[ds_id]]
+  file_path <- file.path(data_dir, cfg$file)
+  
+  message("\n>>> Processing: ", cfg$label, " [ID: ", ds_id, "]")
+  
+  if (!file.exists(file_path)) {
+    message("Skip: file not found", file_path)
+    next
+  }
+  
+  # 1. Cargar y estandarizar
+  df <- read_any_data(file_path) %>% standardise_norms()
+  
+  # 2. Validar columnas
+  miss <- setdiff(feature_cols, names(df))
+  if (length(miss) > 0) {
+    message("Error: Missing columns: ", paste(miss, collapse=", "))
+    next
+  }
+  
+  # 3. Preparar matriz numérica
+  X <- as.matrix(df[, feature_cols])
+  storage.mode(X) <- "double"
+  
+  # 4. Calcular t-SNE para cada distancia
+  for (d in distances) {
+    message("  - Calculando t-SNE (", d, ")...")
+    
+    # Intentar computar (evita que el script muera si Mahalanobis falla por singularidad)
+    tryCatch({
+      Y <- compute_tsne(X, dims = dims, distance_name = d)
+      
+      # Guardar con el ID del dataset (ej: t-SNE_3_cosine_cache_en_deepseek.bin)
+      out_name <- sprintf("t-SNE_%d_%s_cache_%s.bin", dims, tolower(d), ds_id)
+      out_path <- file.path(data_dir, out_name)
+      
+      write_cache_bin(Y, out_path)
+      # message("    Saved: ", out_name)
+    }, error = function(e) {
+      message("Error in", d, ": ", e$message)
+    })
+  }
+}
+
+message("Finished")
+print(list.files(data_dir, pattern = "^t-SNE_3_.*\\.bin$"))

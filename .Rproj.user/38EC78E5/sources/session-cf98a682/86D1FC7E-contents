@@ -1,0 +1,201 @@
+source("ui/shared_elements.r")
+
+# Función auxiliar para crear selectores de dataset (para no repetir código)
+dataset_input <- function(id, label, default) {
+  selectInput(
+    inputId = id,
+    label = label,
+    choices = setNames(names(DATASETS), sapply(DATASETS, function(x) x$label)),
+    selected = default
+  )
+}
+
+tab_one_to_one <- tabPanel(
+  title = "One-to-one",
+  sidebarLayout(
+    sidebarPanel(
+      h3("Calculate distances between concepts:"),
+      h4("One-to-one"),
+      aboutText(includeMarkdown("ui/page_text/distances_one_one.md")),
+      
+      # NUEVO: Selectores de Dataset
+      tags$div(style="display: flex; gap: 10px;",
+               dataset_input("one_one_ds1", "Dataset 1", names(DATASETS)[1]),
+               dataset_input("one_one_ds2", "Dataset 2", names(DATASETS)[2])
+      ),
+      
+      tags$div(
+        tags$em("Outputs include within-dataset and cross-dataset distances for the selected sources.")
+      ),
+      textAreaInput(
+        inputId = "one_one_word_pairs",
+        label = "Concept pairs",
+        rows = 10
+      ),
+      helpText(includeMarkdown("ui/help_text/text_entry_pairs.md")),
+      
+      # Botón random ahora usa el Dataset 1 seleccionado
+      conditionalPanel(
+        condition = "input.one_one_word_pairs.length == 0",
+        actionButton("one_one_button_random_pairs", label = "Random word pairs")
+      ) %>% tagAppendAttributes(class = "inline"),
+      
+      conditionalPanel(
+        condition = "input.one_one_word_pairs.length > 0",
+        actionButton("one_one_button_clear", label = "Clear"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      
+      summaryText("one_one_summary_pairs"),
+      distance_select_with_id("one_one")
+    ),
+    mainPanel(
+      checkboxInput("will_show_results_one_one", label="") %>% tagAppendAttributes(class = 'hidden'),
+      conditionalPanel(
+        condition = "input.will_show_results_one_one == 1",
+        downloadButton(outputId = "one_one_table_download",
+                       label = "Download distance list [.csv]"),
+        tableOutput(outputId = "one_one_distances_table")
+      )
+    )
+  )
+)
+
+tab_one_to_many <- tabPanel(
+  title = "One-to-many",
+  sidebarLayout(
+    sidebarPanel(
+      h3("Calculate distances between concepts:"),
+      h4("One-to-many"),
+      aboutText(includeMarkdown("ui/page_text/distances_one_many.md")),
+      
+      # NUEVO: Selectores de Dataset
+      tags$div(style="display: flex; gap: 10px;",
+               dataset_input("one_many_ds1", "Dataset 1", names(DATASETS)[1]),
+               dataset_input("one_many_ds2", "Dataset 2", names(DATASETS)[2])
+      ),
+      
+      tags$div(
+        tags$em("Outputs include within-dataset and cross-dataset distances for the selected sources.")
+      ),
+      textInput(
+        inputId = "one_many_word_one",
+        label = "First concept",
+      ),
+      helpText(includeMarkdown("ui/help_text/text_entry_word.md")),
+      conditionalPanel(
+        condition = "input.one_many_word_one.length == 0",
+        actionButton("one_many_button_random_one", label = "Random word"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      conditionalPanel(
+        condition = "input.one_many_word_one.length > 0",
+        actionButton("one_many_button_clear_one", label = "Clear"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      summaryText("one_many_summary_one"),
+      textAreaInput(
+        inputId = "one_many_words_many",
+        label = "Other concepts",
+        rows = 10
+      ),
+      helpText(includeMarkdown("ui/help_text/text_entry_words.md")),
+      conditionalPanel(
+        condition = "input.one_many_words_many.length == 0",
+        actionButton("one_many_button_random_many", label = "Random words"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      conditionalPanel(
+        condition = "input.one_many_words_many.length > 0",
+        actionButton("one_many_button_clear_many", label = "Clear"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      summaryText("one_many_summary_many"),
+      distance_select_with_id("one_many")
+    ),
+    mainPanel(
+      checkboxInput("will_show_results_one_many", label="") %>% tagAppendAttributes(class = 'hidden'),
+      conditionalPanel(
+        condition = "input.will_show_results_one_many",
+        downloadButton(outputId = "one_many_table_download",
+                       label = "Download distance list [.csv]"),
+        tableOutput(outputId = "one_many_distances_table")
+      )
+    )
+  )
+)
+
+tab_many_to_many <- tabPanel(
+  title = "Many-to-many (matrix)",
+  sidebarLayout(
+    sidebarPanel(
+      h3("Calculate distances between concepts:"),
+      h4("Many-to-many (distance matrix)"),
+      aboutText(includeMarkdown("ui/page_text/distances_many_many.md")),
+      
+      # NUEVO: Selectores de Dataset
+      tags$div(style="display: flex; gap: 10px;",
+               dataset_input("many_many_ds1", "Dataset 1", names(DATASETS)[1]),
+               dataset_input("many_many_ds2", "Dataset 2", names(DATASETS)[2])
+      ),
+      
+      tags$div(
+        tags$em("Matrices are provided for internal and cross-dataset comparisons based on your selection.")
+      ),
+      checkboxInput(
+        inputId = "many_many_symmetric",
+        label = "Symmetric distance matrix",
+        value = TRUE
+      ),
+      helpText(includeMarkdown("ui/help_text/distance_asymmetric.md")),
+      textAreaInput(
+        inputId = "many_many_words_left",
+        label = "Set 1",
+        rows = 10
+      ),
+      helpText(includeMarkdown("ui/help_text/text_entry_words.md")),
+      conditionalPanel(
+        condition = "input.many_many_words_left.length == 0",
+        actionButton("many_many_button_random_left", label = "Random words"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      conditionalPanel(
+        condition = "input.many_many_words_left.length > 0",
+        actionButton("many_many_button_clear_left", label = "Clear"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      summaryText("many_many_summary_left"),
+      conditionalPanel(
+        condition = "! input.many_many_symmetric",
+        textAreaInput(
+          inputId = "many_many_words_right",
+          label = "Set 2",
+          rows = 10
+        ),
+        conditionalPanel(
+          condition = "input.many_many_words_right.length == 0",
+          actionButton("many_many_button_random_right", label = "Random words"),
+        ) %>% tagAppendAttributes(class = "inline"),
+        conditionalPanel(
+          condition = "input.many_many_words_right.length > 0",
+          actionButton("many_many_button_clear_right", label = "Clear"),
+        ) %>% tagAppendAttributes(class = "inline"),
+        summaryText("many_many_summary_right"),
+      ),
+      distance_select_with_id("many_many")
+    ),
+    mainPanel(
+      checkboxInput("will_show_results_many_many", label="") %>% tagAppendAttributes(class = 'hidden'),
+      conditionalPanel(
+        condition = "input.will_show_results_many_many",
+        tabsetPanel(
+          # Los títulos ahora son genéricos, el servidor se encargará de llenarlos
+          tabPanel("D1 → D1", tableOutput(outputId = "many_many_distances_table_AA")),
+          tabPanel("D2 → D2", tableOutput(outputId = "many_many_distances_table_BB")),
+          tabPanel("D1 → D2", tableOutput(outputId = "many_many_distances_table_AB")),
+          tabPanel("D2 → D1", tableOutput(outputId = "many_many_distances_table_BA"))
+        )
+      )
+    )
+  )
+)
+
+page_distances <- navbarMenu(
+  "Calculate distances",
+  tab_one_to_one,
+  tab_one_to_many,
+  tab_many_to_many
+)

@@ -1,0 +1,1 @@
+Check this option to compute distances within a single list of concepts (Set 1). Uncheck it to enter a second list (Set 2) and compute distances between the two lists.

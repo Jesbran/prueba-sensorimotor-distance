@@ -1,0 +1,2 @@
+Enter pairs of concepts separated by colons, commas, tabs, or semicolons. Enter each pair on a separate line.
+Press **Clear** to remove words, and **Random word pairs** to generate new ones from the selected dataset.

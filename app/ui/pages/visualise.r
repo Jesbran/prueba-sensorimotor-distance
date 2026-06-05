@@ -1,0 +1,65 @@
+source("ui/shared_elements.r")
+
+# Visualise concepts (cross-dataset MDS)
+
+
+page_visualise <- tabPanel(
+  title = "Visualise concepts",
+  sidebarLayout(
+    sidebarPanel(
+      h3("Visualise concepts (cross-dataset MDS)"),
+      aboutText(includeMarkdown("ui/page_text/visualise.md")),
+      
+      # Select two datasets
+      tags$div(style="display: flex; gap: 10px;",
+               selectInput(
+                 inputId = "visualise_ds1",
+                 label = "Dataset 1",
+                 choices = setNames(names(DATASETS), sapply(DATASETS, function(x) x$label)),
+                 selected = names(DATASETS)[1]
+               ),
+               selectInput(
+                 inputId = "visualise_ds2",
+                 label = "Dataset 2",
+                 choices = setNames(names(DATASETS), sapply(DATASETS, function(x) x$label)),
+                 selected = names(DATASETS)[2] # Select second dataset as default
+               )
+      ),
+      
+      tags$div(
+        tags$em("Each concept is represented twice (once per dataset coloured by source).")
+      ),
+      
+      textAreaInput(
+        inputId = "visualise_words",
+        label = "Concepts",
+        rows = 10
+      ),
+      helpText(includeMarkdown("ui/help_text/text_entry_words.md")),
+      
+      conditionalPanel(
+        condition = "input.visualise_words.length == 0",
+        actionButton("visualise_button_random", label = "Random words"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      conditionalPanel(
+        condition = "input.visualise_words.length > 0",
+        actionButton("visualise_button_clear", label = "Clear"),
+      ) %>% tagAppendAttributes(class = "inline"),
+      
+      summaryText("visualise_words_summary"),
+      distance_select_with_id("visualise"),
+      
+      checkboxInput(
+        inputId = "visualise_show_lines",
+        label = "Show connecting lines",
+        value = TRUE
+      ),
+      helpText(includeMarkdown("ui/help_text/connecting_lines.md")),
+    ),
+    mainPanel(
+      withSpinner(
+        plotlyOutput(outputId = "visualise_mds_plot")
+      )
+    )
+  )
+)
