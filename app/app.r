@@ -21,18 +21,18 @@ if (!dir.exists("data")) {
   message("Descargando base de datos de sensores desde GitHub...")
   dir.create("data")
   
-  # URL de descarga de tu archivo ZIP de lanzamiento
-  url_zip <- "https://github.com/Jesbran/prueba-sensorimotor-distance/releases/download/v1.0.0/data.zip"
+  # URL directa del archivo en la raíz del repositorio de GitHub (con CORS desbloqueado)
+  url_zip <- "https://raw.githubusercontent.com/Jesbran/prueba-sensorimotor-distance/main/data.zip"
   
-  # Descargar el archivo zip de forma binaria
+  # Descargar el archivo zip
   download.file(url_zip, "data.zip", mode = "wb")
   
-  # Descomprimir los archivos directamente en la carpeta virtual 'data'
+  # Descomprimir en la carpeta virtual 'data'
   unzip("data.zip", exdir = "data")
   
-  # Eliminar el archivo zip temporal para liberar memoria
+  # Eliminar archivo temporal
   file.remove("data.zip")
-  message("Datos listos y descomprimidos de manera exitosa.")
+  message("Datos listos y descomprimidos.")
 }
 # =========================================================
 
