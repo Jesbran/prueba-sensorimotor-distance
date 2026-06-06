@@ -16,6 +16,26 @@ library(plotly)
 library(readxl) 
 library(tools)  
 
+# === DESCOMPRESOR AUTOMÁTICO DE DATOS PARA WEBASSEMBLY ===
+if (!dir.exists("data")) {
+  message("Descargando base de datos de sensores desde GitHub...")
+  dir.create("data")
+  
+  # URL de descarga de tu archivo ZIP de lanzamiento
+  url_zip <- "https://github.com/Jesbran/prueba-sensorimotor-distance/releases/download/v1.0.0/data.zip"
+  
+  # Descargar el archivo zip de forma binaria
+  download.file(url_zip, "data.zip", mode = "wb")
+  
+  # Descomprimir los archivos directamente en la carpeta virtual 'data'
+  unzip("data.zip", exdir = "data")
+  
+  # Eliminar el archivo zip temporal para liberar memoria
+  file.remove("data.zip")
+  message("Datos listos y descomprimidos de manera exitosa.")
+}
+# =========================================================
+
 # Core logic and data
 source("meta.r")
 source("calculate/norms.r")
