@@ -133,7 +133,7 @@ mds_plot_two_datasets <- function(mds_positions, ds1, ds2, with_lines = FALSE) {
 get_tsne_positions <- function(distance_type, dims, ds) {
   # ds ahora es el ID (ej: "en_deepseek")
   
-  infile <- file.path(data_dir, sprintf("t-SNE_%d_%s_cache_%s.bin", dims, distance_name(distance_type), ds))
+  infile <- file.path(data_dir, sprintf("t-SNE_%d_%s_cache_%s.bin", dims, tolower(distance_name(distance_type)), ds))
   
   if (!file.exists(infile)) {
     stop(paste("No se encontró el archivo de cache:", infile))
